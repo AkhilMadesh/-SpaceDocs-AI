@@ -21,15 +21,6 @@ This is a **Week 1-2 stage build**:
   documents" instead of hallucinating
 - ✅ Conversation history + confidence scores in the UI
 
-**Not yet built (later weeks, by design — see `02_Technical_Problem_Compendium.md`):**
-- ❌ Compare Two Documents (mini-extension — Week 3)
-- ❌ Document summarization, quiz generation (later additions, not required for the skinny build)
-- ❌ Formal eval report with 20+ scored Q&A pairs (Week 3-4)
-- ❌ Live deployment (Week 4)
-- ❌ ADR-002 and ADR-003 (drafted ahead of schedule, held in `docs/future-adrs/` until Week 3 per the spec)
-
----
-
 ## Tech Stack
 
 | Component | Choice | Why |
