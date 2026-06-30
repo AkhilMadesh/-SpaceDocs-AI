@@ -11,9 +11,7 @@
 
 ## What this is (right now)
 
-This is a **Week 1-2 stage build**, not the final product. Per the
-internship workflow's Week 2 bar: *"the end-to-end skinny version works.
-Ugly is fine. Working is the bar."* That's exactly what's here:
+This is a **Week 1-2 stage build**:
 
 - ✅ Upload PDFs (NASA reports, ISRO mission docs, Chandrayaan/Artemis
   documentation, satellite engineering manuals)
