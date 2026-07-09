@@ -2,58 +2,86 @@
 
 > Talk to NASA, ISRO, and space research documents — in plain English.
 
-**Problem statement code:** I2 — Document Q&A (RAG over a Focused Corpus)
-**Segment:** Foundations of Applied Machine Learning
-**Student:** Akhil
-**Status:** Week 2 — skinny end-to-end build working
+**Problem statement:** I2 — Document Q&A (RAG over a Focused Corpus)
+**Segment:** Foundations of Applied Machine Learning · B.Tech CSE-AIDE, LPU
+**Student:** Akhil | **Cohort:** 2nd Year, 2026
 
 ---
 
-## What this is (right now)
+## 1. Demo
 
-This is a **Week 1-2 stage build**:
+> *(Add your Loom link here after recording the Week 4 walkthrough)*
 
-- ✅ Upload PDFs (NASA reports, ISRO mission docs, Chandrayaan/Artemis
-  documentation, satellite engineering manuals)
-- ✅ They get parsed, chunked, embedded, and stored in a vector database
-- ✅ Ask a question, get a grounded answer with page-number citations
-- ✅ Out-of-domain guardrail — says "I don't know based on uploaded
-  documents" instead of hallucinating
-- ✅ Conversation history + confidence scores in the UI
+[![Live App](https://img.shields.io/badge/🚀_Live_App-Streamlit_Cloud-FF4B4B?style=for-the-badge)](https://your-app-url.streamlit.app)
+[![Watch Demo](https://img.shields.io/badge/▶️_Watch_Demo-Loom-7B68EE?style=for-the-badge)](https://www.loom.com/share/your-video-id)
 
-## Tech Stack
+*Live deployment and Loom link added in Week 4.*
+
+---
+
+## 2. Problem Statement
+
+Scientific and aerospace literature — NASA technical reports, ISRO mission
+documentation, Chandrayaan and Artemis documents, satellite engineering
+manuals — is information-dense, jargon-heavy, and slow to navigate.
+A researcher or student often spends more time *finding* an answer inside a
+PDF than *understanding* it. Keyword search (Ctrl+F) breaks down when you
+don't know the exact term the author used. Generic LLMs hallucinate
+plausible-sounding answers about niche aerospace topics they weren't
+reliably trained on.
+
+**SpaceDocs AI** solves this by letting users upload space-domain PDFs and
+ask questions in plain English, getting back grounded answers with
+page-level citations — and an honest "I don't know based on uploaded
+documents." when the corpus doesn't contain the answer. Every answer is
+traceable to the exact page it came from.
+
+---
+
+## 3. Architecture
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   INGESTION (offline)                  │
+│                                                        │
+│  PDF Upload → PyMuPDF Parse → Chunk (500/100 chars)   │
+│            → Embed (BGE-small-en-v1.5, local)         │
+│            → Store in ChromaDB (persisted to disk)    │
+└───────────────────────────┬────────────────────────────┘
+                            │
+┌───────────────────────────▼────────────────────────────┐
+│               QUERY TIME (per question)                │
+│                                                        │
+│  Question → Embed Query → Hybrid Retrieve (top-5)     │
+│             [Dense (ChromaDB) × 0.6]                  │
+│           + [BM25 keyword    × 0.4]                   │
+│           → Guardrail check (similarity threshold)    │
+│           → Gemini 2.5 Flash (grounded prompt)        │
+│           → Answer + Citations + Confidence           │
+│           → Streamlit Chat UI                         │
+└────────────────────────────────────────────────────────┘
+```
+
+*See `docs/architecture-diagram.md` for the Mermaid source.*
+
+---
+
+## 4. Tech Stack
 
 | Component | Choice | Why |
 |---|---|---|
-| PDF parsing | PyMuPDF | Fast, accurate, gives per-page text for citations |
-| Chunking | LangChain `RecursiveCharacterTextSplitter` | Paragraph-aware splitting |
-| Embeddings | `BAAI/bge-small-en-v1.5` (local) | Free, offline, strong small-model retrieval |
-| Vector DB | ChromaDB | Zero-setup, persists to disk |
-| LLM | Gemini 2.5 Flash | Free tier, fast, follows grounding instructions well |
-| UI | Streamlit | Fastest path to a demo-able interface |
-
-Full reasoning: [`docs/design_doc.md`](docs/design_doc.md)
-First architecture decision record: [`docs/adr/ADR-001-vector-database-choice.md`](docs/adr/ADR-001-vector-database-choice.md)
-
----
-
-## Architecture
-
-```
-PDF upload → PyMuPDF parse → chunk (500/100) → embed (BGE-small)
-          → store in ChromaDB
-
-User question → embed query → semantic retrieve (top-5)
-             → guardrail check (confidence threshold)
-             → Gemini 2.5 Flash (grounded prompt) → answer + citations
-             → Streamlit chat UI
-```
-
-Diagram source (Mermaid): [`docs/architecture-diagram.md`](docs/architecture-diagram.md)
+| **PDF parsing** | PyMuPDF | Fast, accurate, gives per-page text for citations |
+| **Chunking** | LangChain `RecursiveCharacterTextSplitter` | Paragraph-aware splitting, predictable behaviour |
+| **Embeddings** | `BAAI/bge-small-en-v1.5` (local, via `sentence-transformers`) | Free, offline, strong retrieval benchmarks for its size |
+| **Vector DB** | ChromaDB (`PersistentClient`) | Zero-setup, persists to disk, native metadata filtering |
+| **Keyword search** | `rank-bm25` | Lightweight BM25 for the hybrid retrieval requirement |
+| **LLM** | Gemini 2.5 Flash | Free tier, fast, follows strict grounding instructions |
+| **UI** | Streamlit | Fastest path to a usable, demo-able interface |
+| **Language** | Python 3.11 | Internship track standard |
 
 ---
 
-## Quickstart
+## 5. Quickstart
 
 ### Prerequisites
 - Python 3.11
@@ -62,7 +90,7 @@ Diagram source (Mermaid): [`docs/architecture-diagram.md`](docs/architecture-dia
 ### Install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/<your-username>/SpaceDocs_AI.git
 cd SpaceDocs_AI
 
 python -m venv venv
@@ -71,7 +99,7 @@ source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# edit .env and paste your GOOGLE_API_KEY
+# Open .env and paste your GOOGLE_API_KEY
 ```
 
 ### Run
@@ -80,96 +108,155 @@ cp .env.example .env
 streamlit run app/main.py
 ```
 
-Open `http://localhost:8501`, upload PDFs in the sidebar, then ask a question.
+App available at `http://localhost:8501`.
 
-### Test the data layer directly (no UI)
+Upload PDFs in the sidebar → ask questions in the chat → compare two
+documents in the **Compare** tab.
 
-```bash
-# Confirm PDF parsing works
-python -m backend.ingestion.pdf_loader data/uploads/your_report.pdf
-
-# Confirm retrieval works (after ingesting via the app)
-python -m backend.retrieval.retriever "your test question"
-
-# Confirm full grounded generation works (requires GOOGLE_API_KEY)
-python -m backend.llm.gemini_client "your test question"
-```
-
-### Run tests
+### Test
 
 ```bash
 pytest tests/ -v
 ```
 
----
+Expected: all tests pass. Tests run without any API keys or services.
 
-## Data Source
+### Test the data layer directly (no UI needed)
 
-NASA technical reports, ISRO mission documentation (Chandrayaan, PSLV),
-Artemis program reports, and satellite engineering manuals — user-uploaded
-PDFs, my own selection. Nothing is bundled in the repo; documents are
-uploaded by the user at runtime.
+```bash
+# Parse a PDF and print the first page
+python -m backend.ingestion.pdf_loader data/uploads/your_report.pdf
 
----
+# Run hybrid retrieval (requires ingested docs in ChromaDB)
+python -m backend.retrieval.retriever "What is PSLV?"
 
-## What I Learned This Week (Week 2)
-
-- ChromaDB's `PersistentClient` solved a problem I expected to be annoying
-  (keeping the vector store alive across app restarts) — it just works.
-- Writing the system prompt for the "I don't know" guardrail took more
-  iteration than expected — the model would sometimes answer *near* the
-  fallback sentence instead of exactly it, which breaks simple string
-  matching. Settled on an explicit "respond with EXACTLY this sentence"
-  instruction.
-- Caught a real bug while reviewing current docs: `google-generativeai` is
-  deprecated. Switched the LLM call path to the current `google-genai`
-  client SDK before this even got to a mentor review — good habit to keep.
-
-## What Surprised Me
-
-How much the out-of-domain guardrail threshold matters in practice. With
-no tuning, 0.35 felt arbitrary on paper, but watching it correctly reject
-an off-topic test question ("what's the capital of France?") while still
-answering a real Chandrayaan question made the design click — confidence
-scoring isn't just a UI nicety, it's load-bearing for trust.
+# Full Q&A pipeline (requires GOOGLE_API_KEY)
+python -m backend.llm.gemini_client "Explain the Chandrayaan-3 landing"
+```
 
 ---
 
-## Status One-Pager
+## 6. Data Sources
 
-**What's done:**
-Full skinny pipeline — upload, parse, chunk, embed, store, retrieve,
-generate grounded answer, display with citations and confidence. Guardrail
-for out-of-domain questions implemented and manually tested. ADR-001
-written in the program's required template.
+User-uploaded PDFs — nothing is bundled in the repo. Recommended corpus
+for testing and demo:
 
-**What's stuck:**
-Nothing blocking right now. Confidence threshold (0.35) is a guess — will
-tune once eval questions exist in Week 3.
+| Document | Source |
+|---|---|
+| Chandrayaan-3 Mission Overview | ISRO public releases |
+| Artemis Program Mission Report | NASA.gov |
+| PSLV User's Manual | ISRO/Antrix |
+| Satellite Engineering Handbook | Public domain / open access |
+| NASA CubeSat Launch Initiative Guide | NASA.gov |
 
-**3 goals for next week (Week 3):**
-1. Build the Compare Two Documents mini-extension.
-2. Confirm the existing test suite passes and capture a screenshot for
-   the submission.
-3. Write ADR-002 and ADR-003, polish the README to the full Milestone 1
-   standard (architecture diagram image, known limitations section, etc.).
-
-**One thing I'd like help from my mentor on:**
-Whether a 0.35 similarity threshold is reasonable for the out-of-domain
-guardrail, or if there's a better default to start from before I have
-eval data to tune against.
+All documents are freely and publicly available. Upload them via the
+Streamlit sidebar to populate the knowledge base.
 
 ---
 
-## Known Limitations (current stage)
+## 7. ADRs
 
-- Scanned/image-only PDFs aren't supported (no OCR).
-- The 0.35 guardrail threshold is unvalidated against real eval data yet.
-- Only ADR-001 exists so far — ADR-002 and ADR-003 are drafted but held
-  back until Week 3 per the deliverables schedule.
+Three architecture decision records explaining the key technical choices:
+
+| ADR | Decision | TL;DR |
+|---|---|---|
+| [ADR-001](docs/adr/ADR-001-vector-database-choice.md) | Vector database | ChromaDB: free, local, zero-setup, sufficient for this corpus size |
+| [ADR-002](docs/adr/ADR-002-embedding-model-choice.md) | Embedding model | BGE-small-en-v1.5: best retrieval quality for its size, runs offline |
+| [ADR-003](docs/adr/ADR-003-guardrail-strategy.md) | Guardrail strategy | Two layers: similarity threshold + prompt instruction |
 
 ---
 
-## License
+## 8. Mini-Extension — Compare Two Documents
 
-MIT — see [LICENSE](LICENSE).
+**What:** Upload two PDFs (e.g., Chandrayaan-3 report and Artemis mission
+report), select them in the **Compare** tab, and ask any comparison
+question:
+- *"What's different between these on propulsion technology?"*
+- *"How do their mission objectives compare?"*
+- *"Which document covers lunar south pole landing in more detail?"*
+
+**How it works:**
+1. Fetch a representative sample of chunks from each document independently
+   (via ChromaDB metadata filter on `document_id`).
+2. Pass both chunk sets to Gemini 2.5 Flash with a comparison-focused
+   prompt that strictly prohibits outside knowledge.
+3. If the excerpts don't support a confident comparison on some aspect,
+   the model is instructed to say so explicitly rather than guessing.
+
+**Why it matters:** multi-document reasoning is a step up from single-doc
+RAG. It mirrors a real aerospace analyst workflow — "how does this ISRO
+mission differ from NASA's approach?" — and is the direct precursor to the
+3rd year "enterprise messy corpus" extension.
+
+**Code:** `backend/llm/doc_comparator.py` + `frontend/features.py` (Compare tab)
+
+---
+
+## 9. Known Limitations
+
+- **Scanned/image-only PDFs** are not supported — PyMuPDF extracts text
+  only, no OCR. Clear error message is shown.
+- **0.35 confidence threshold** is manually tuned, not calibrated against
+  real eval data yet. Tuning happens in Week 3-4 once eval questions are
+  scored.
+- **BM25 index is rebuilt per-query** from the ChromaDB candidate pool —
+  fine for the corpus size here, not ideal at scale.
+- **Single-language only** — English documents. Non-English PDFs produce
+  garbled text from PyMuPDF's text extractor.
+- **No multi-user isolation** — one shared ChromaDB instance. Uploading
+  different users' documents would intermix unless filtered by `document_id`.
+
+---
+
+## 10. What I'd Do in 3rd Year
+
+See the full roadmap: [`docs/roadmap_3rd_year.md`](docs/roadmap_3rd_year.md)
+
+Short version:
+1. **Aug-Sep 2026:** Add the evaluation harness (20+ Q&A pairs, RAGAS
+   metrics), tune the confidence threshold, add hybrid retrieval reranker.
+2. **Oct-Nov 2026:** Migrate from ChromaDB to Qdrant Cloud; add multi-format
+   ingestion (Word, HTML, tables); proper CI/CD with GitHub Actions.
+3. **Nov-Dec 2026:** Add an agentic multi-step query layer — for complex
+   questions that need multiple retrievals before answering.
+4. **3rd year internship (2027):** This becomes the I3/E3 corpus-at-scale
+   problem — same RAG architecture, but over 4+ source types, dirty data,
+   fine-tuned domain embedding, continuous eval harness.
+
+---
+
+## 11. License & Acknowledgements
+
+**License:** MIT — see [LICENSE](LICENSE)
+
+**Acknowledgements:**
+- NASA and ISRO for publicly available mission documentation
+- `sentence-transformers` / BAAI for the BGE embedding model
+- LangChain, ChromaDB, rank-bm25 open-source communities
+- Google Gemini API free tier
+- LPU internship mentors for the I2 problem design
+
+---
+
+## Week 3 Progress Notes
+
+**What I'd do differently:**
+I under-estimated how much the retriever matters relative to the LLM. I
+spent a lot of Week 2 thinking about the Gemini prompt and almost none
+thinking about retrieval quality. In hindsight, I would have built the
+hybrid BM25 + dense retriever first and validated it with test questions
+before writing a single line of Gemini integration — because bad retrieval
+makes good prompting useless, but good retrieval makes even a mediocre
+prompt produce reasonable answers.
+
+**Status one-pager:**
+- **Done:** hybrid retrieval, mini-extension (Compare Two Documents), ADR-002
+  and ADR-003, all deprecated SDK calls fixed, full test suite (5 test files),
+  Milestone 1 README complete.
+- **Stuck:** nothing blocking. Confidence threshold is still a guess —
+  needs real eval data to tune (next).
+- **3 goals for Week 4:** (1) deploy to Streamlit Cloud, (2) record 3-min
+  Loom walkthrough, (3) write 20+ eval questions and run first scored pass.
+- **Mentor help needed:** advice on whether to use RAGAS or a simpler
+  hand-rolled eval (LLM-as-judge) for the 20-question scored pass — which
+  is more defensible in a placement interview?
