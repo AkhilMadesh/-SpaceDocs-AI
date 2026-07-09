@@ -1,0 +1,35 @@
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables (NEVER commit secrets)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Vector DB data (large, regenerable — don't commit)
+vectordb/
+embeddings/cache/
+
+# Uploaded PDFs (user data, not code)
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Evaluation outputs (regenerable)
+evaluation/reports/
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
